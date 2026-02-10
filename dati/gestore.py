@@ -1,5 +1,7 @@
 import csv
 import os
+import math
+from datetime import datetime
 
 # per gestire i valori NULL e i valori numerici con la virgola(al posto del punto)
 def gestisci_null(file_path):
@@ -7,9 +9,8 @@ def gestisci_null(file_path):
 
     # Lista delle colonne che contengono numeri con la virgola da convertire
     colonne_numeriche = [
-        'TMEDIA °C', 'TMIN °C', 'TMAX °C', 'PUNTORUGIADA °C', 
-        'VENTOMEDIA km/h', 'VENTOMAX km/h', 'RAFFICA km/h', 
-        'PRESSIONESLM mb', 'PRESSIONEMEDIA mb', 'PIOGGIA mm'
+        'TMEDIA °C', 'TMIN °C', 'TMAX °C', 
+        'VENTOMEDIA km/h', 'PRESSIONEMEDIA mb', 'PIOGGIA mm'
     ]
 
     righe_modificate = []
@@ -89,59 +90,150 @@ def separatore_data(file_path):
 
     print("  - Il campo DATA è stato diviso in ANNO, MESE e GIORNO.")
 
-# rappresenta i mesi e le città con la tecnica dell'one_hot_encoding
-def one_hot_encoding(file_input, colonne_da_trasformare):
-    # colonne da trasformare = ["MESE", "LOCALITA"]
-    file_temp = file_input + ".tmp"
-
-    with open(file_input, newline="", encoding="utf-8") as fin:
-        # Leggiamo prima tutto per identificare le categorie uniche delle città
+def elimina_colonne(file_path, colonne_da_eliminare):
+    righe_modificate = []
+    
+    with open(file_path, newline="", encoding="utf-8") as fin:
         reader = csv.DictReader(fin, delimiter=";")
-        righe = list(reader)
-        nomi_colonne_originali = reader.fieldnames
+        
+        # Copia i fieldnames attuali per modificarli
+        fieldnames = reader.fieldnames.copy()
+        
+        # Rimuovi le colonne dall'intestazione (se esistono)
+        for col in colonne_da_eliminare:
+            if col in fieldnames:
+                fieldnames.remove(col)
+        
+        # Itera sulle righe e rimuovi i dati
+        for riga in reader:
+            for col in colonne_da_eliminare:
+                # Rimuovi la chiave dal dizionario se presente
+                if col in riga:
+                    del riga[col]
+            righe_modificate.append(riga)
 
-    # Determiniamo le categorie per ogni colonna
-    mappa_categorie = {}
-    for col in colonne_da_trasformare:
-        if col == "MESE":
-            # Per i mesi forziamo 1-12 anche se nel dataset ne mancasse uno
-            mappa_categorie[col] = [str(i) for i in range(1, 13)]
-        else:
-            # Per le città (o altro) prendiamo i valori unici presenti nel file
-            categorie_uniche = sorted(list(set(riga[col] for riga in righe if riga[col])))
-            mappa_categorie[col] = categorie_uniche
-
-    # Costruiamo i nuovi fieldnames
-    nuovi_fieldnames = []
-    for col in nomi_colonne_originali:
-        if col in colonne_da_trasformare:
-            # Sostituiamo la colonna con le sue versioni One-Hot
-            prefix = "Mese" if col == "MESE" else col
-            for cat in mappa_categorie[col]:
-                nuovi_fieldnames.append(f"{prefix}_{cat}")
-        else:
-            nuovi_fieldnames.append(col)
-
-    # Scriviamo il file modificato
-    with open(file_temp, "w", newline="", encoding="utf-8") as fout:
-        writer = csv.DictWriter(fout, fieldnames=nuovi_fieldnames, delimiter=";")
+    # Riscrivi il file senza le colonne rimosse
+    with open(file_path, "w", newline="", encoding="utf-8") as fout:
+        # 'extrasaction' non è strettamente necessario qui perché abbiamo rimosso 
+        # le chiavi manualmente dal dizionario 'riga', ma è una buona sicurezza.
+        writer = csv.DictWriter(fout, fieldnames=fieldnames, delimiter=";")
         writer.writeheader()
+        writer.writerows(righe_modificate)
 
-        for riga in righe:
-            nuova_riga = {}
-            # Copiamo le colonne che non cambiano
-            for col in nomi_colonne_originali:
-                if col not in colonne_da_trasformare:
-                    nuova_riga[col] = riga[col]
-            
-            # Espandiamo le colonne One-Hot
-            for col in colonne_da_trasformare:
-                valore_corrente = riga[col]
-                prefix = "Mese" if col == "MESE" else col
-                for cat in mappa_categorie[col]:
-                    nuova_riga[f"{prefix}_{cat}"] = "1" if cat == valore_corrente else "0"
-            
-            writer.writerow(nuova_riga)
+    print(f"  - Sono state eliminate le Colonne: {colonne_da_eliminare}")
 
-    os.replace(file_temp, file_input)
-    print(f"  - La rappresentazione One-Hot Encoding è stata applicat a: {', '.join(colonne_da_trasformare)}.\n")
+
+def aggiungi_ciclicita_data(file_path):
+   
+    righe_modificate = []
+
+    with open(file_path, newline="", encoding="utf-8") as fin:
+        reader = csv.DictReader(fin, delimiter=";")
+        fieldnames = reader.fieldnames.copy()
+
+        # Inserisci le nuove colonne nell'header subito dopo 'GIORNO'
+        if "GIORNO" in fieldnames:
+            idx = fieldnames.index("GIORNO")
+            # Inseriamo dopo GIORNO (idx + 1)
+            fieldnames.insert(idx + 1, "COS_GIORNO")
+            fieldnames.insert(idx + 1, "SIN_GIORNO") # Inseriamo prima SIN così finisce prima di COS
+        else:
+            # Fallback se non trova GIORNO: le aggiunge alla fine
+            fieldnames.extend(["SIN_GIORNO", "COS_GIORNO"])
+
+        for riga in reader:
+            try:
+                # Recupera anno, mese, giorno convertendoli in interi
+                anno = int(riga.get("ANNO", 0))
+                mese = int(riga.get("MESE", 0))
+                giorno = int(riga.get("GIORNO", 0))
+                
+                # Crea un oggetto data per ottenere il numero del giorno nell'anno (1-366)
+                data_obj = datetime(anno, mese, giorno)
+                giorno_anno = data_obj.timetuple().tm_yday
+                
+                # Giorni in un anno medio (considerando i bisestili per l'apprendimento)
+                giorni_totali = 365.25
+                
+                # Calcolo Sin e Cos
+                # Formula: sin( 2 * pi * giorno_corrente / giorni_totali )
+                val_sin = math.sin(2 * math.pi * giorno_anno / giorni_totali)
+                val_cos = math.cos(2 * math.pi * giorno_anno / giorni_totali)
+                
+                # Aggiungi i valori alla riga (arrotondati a 5 decimali)
+                riga["SIN_GIORNO"] = round(val_sin, 5)
+                riga["COS_GIORNO"] = round(val_cos, 5)
+
+            except (ValueError, TypeError):
+                # Se la data non è valida o mancano i dati, metti 0 o lascia vuoto
+                riga["SIN_GIORNO"] = 0
+                riga["COS_GIORNO"] = 0
+
+            righe_modificate.append(riga)
+
+    # Scrittura su file
+    with open(file_path, "w", newline="", encoding="utf-8") as fout:
+        writer = csv.DictWriter(fout, fieldnames=fieldnames, delimiter=";")
+        writer.writeheader()
+        writer.writerows(righe_modificate)
+
+    print("  - Aggiunte le Colonne SIN_GIORNO e COS_GIORNO per la ciclicità temporale.")
+
+def aggiungi_temperatura_anno_precedente(file_path):
+    righe_modificate = []
+    # Dizionario per mappare (anno, mese, giorno) -> temperatura
+    mappa_temperature = {}
+
+    # 1. Lettura preliminare per caricare i dati in memoria
+    with open(file_path, newline="", encoding="utf-8") as fin:
+        reader = csv.DictReader(fin, delimiter=";")
+        fieldnames = reader.fieldnames.copy()
+        
+        for riga in reader:
+            try:
+                chiave = (int(riga['ANNO']), int(riga['MESE']), int(riga['GIORNO']))
+                mappa_temperature[chiave] = riga.get('TMEDIA °C', "")
+            except (ValueError, KeyError):
+                continue
+
+    # 2. Aggiunta della nuova colonna nell'header
+    nuova_colonna = 'TEMPERATURA_MEDIA_ANNO_PRECEDENTE'
+    if nuova_colonna not in fieldnames:
+        # La inseriamo magari dopo TMEDIA °C se esiste, o in fondo
+        if 'TMEDIA °C' in fieldnames:
+            idx = fieldnames.index('TMEDIA °C')
+            fieldnames.insert(idx + 1, nuova_colonna)
+        else:
+            fieldnames.append(nuova_colonna)
+
+    # 3. Seconda passata per calcolare il valore dell'anno precedente
+    with open(file_path, newline="", encoding="utf-8") as fin:
+        reader = csv.DictReader(fin, delimiter=";")
+        for riga in reader:
+            # se non abbiamo la temperatura dell'anno precedente, mettiamo la media dell'anno stesso
+            temp = riga['TMEDIA °C']
+            try:
+                anno_prec = int(riga['ANNO']) - 1
+                mese = int(riga['MESE'])
+                giorno = int(riga['GIORNO'])
+                
+                # Cerchiamo nella mappa se esiste il valore per l'anno precedente
+                valore_prec = mappa_temperature.get((anno_prec, mese, giorno), "")
+                if not valore_prec:
+                    
+                    riga[nuova_colonna] = riga['TMEDIA °C']
+                    
+                else:
+                    riga[nuova_colonna] = valore_prec
+            except (ValueError, KeyError):
+                riga[nuova_colonna] = temp
+            
+            righe_modificate.append(riga)
+
+    # 4. Scrittura finale
+    with open(file_path, "w", newline="", encoding="utf-8") as fout:
+        writer = csv.DictWriter(fout, fieldnames=fieldnames, delimiter=";")
+        writer.writeheader()
+        writer.writerows(righe_modificate)
+
+    print(f"  - Aggiunta la Colonna '{nuova_colonna}'.")

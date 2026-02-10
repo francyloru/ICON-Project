@@ -2,3 +2,4 @@ installare pandas e sklearn
 
 pip install pandas
 pip install scikit-learn
+pip install xgboost

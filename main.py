@@ -17,18 +17,23 @@ def main():
 
     args = parser.parse_args()
 
+    path_file = "dati/dataset_meteo_unificato.csv"
+
 
     # Esempio di logica: chiama una funzione nell'altro file se il flag è True
     if args.new_dataset:
         print("\n--- Lettura e formalizzazione del Dataset:")
-        unificatore_csv.unifica_dataset("dati/dataset_meteo_unificato.csv")
-        gestore.gestisci_null("dati/dataset_meteo_unificato.csv")
-        gestore.separatore_data("dati/dataset_meteo_unificato.csv")
-        gestore.one_hot_encoding("dati/dataset_meteo_unificato.csv", ["MESE", "LOCALITA", "FENOMENI"])
+        unificatore_csv.unifica_dataset(path_file)
+        gestore.gestisci_null(path_file)
+        gestore.separatore_data(path_file)
+        gestore.elimina_colonne(path_file, ['PUNTORUGIADA °C', 'VISIBILITA km', 'VENTOMAX km/h', 'RAFFICA km/h', 
+        'PRESSIONESLM mb'])
+        gestore.aggiungi_ciclicita_data(path_file)
+        gestore.aggiungi_temperatura_anno_precedente(path_file)
     
     if args.train_and_test:
         print("--- Addestramento e Valutazione del Modello:")
-        train_and_test.train_and_test("dati/dataset_meteo_unificato.csv")
+        train_and_test.train_and_test(path_file, 'TMEDIA °C')
             
     if args.use_model:
         print("\n--- -- INSERIMENTO DATI METEO PER PREVISIONE --")
