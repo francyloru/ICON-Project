@@ -32,8 +32,8 @@ def main():
         gestore.aggiungi_temperatura_anno_precedente(path_file)
     
     if args.train_and_test:
-        print("--- Addestramento e Valutazione del Modello:")
-        train_and_test.train_and_test(path_file, 'TMEDIA °C')
+        print("\n--- Addestramento e Valutazione del Modello con XGBoost:")
+        train_and_test.train_and_test(path_file, 'TMEDIA °C', 2025)
             
     if args.use_model:
         print("\n--- -- INSERIMENTO DATI METEO PER PREVISIONE --")
