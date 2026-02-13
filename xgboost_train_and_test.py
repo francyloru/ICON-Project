@@ -5,6 +5,8 @@ import os
 import math
 import matplotlib.pyplot as plt
 from datetime import datetime
+import calendar # per gestire il numero di giorni ogni mese
+from dati.gestore import leggi_tmedia
 
 import xgboost as xgb
 from sklearn.model_selection import GridSearchCV, TimeSeriesSplit
@@ -140,10 +142,6 @@ def train_and_test(dataset, target_column, anno_test):
         decimal=','
     )
 
-    
-
-
-
     # ===============================
     # 8. RETRAIN FINALE SU 2020–2025
     # ===============================
@@ -171,19 +169,30 @@ def train_and_test(dataset, target_column, anno_test):
 
 
 def usa_modello():
+    # 1. INPUT UTENTE (Giorno e Mese richiesti esplicitamente)
+    anno = 2026
+    print(f"Anno della previsione: {anno}")
+    mese = int(input("Mese (1-12): "))
+    giorno = int(input("Giorno (1-31): "))
+    temp_anno_prec = leggi_tmedia(mese, giorno)
+    print(f"Temperatura media dello stesso giorno anno precedente (°C): {temp_anno_prec}")
+
+    previsione = predici (anno, mese, giorno, temp_anno_prec)
+    
+    print("\n" + "="*40)
+    print(f"DATA: {giorno}/{mese}/{anno}")
+    print(f"PREVISIONE TEMPERATURA MEDIA: {previsione[0]:.2f} °C")
+    print("="*40 + "\n")
+
+
+# restituisce la predizione per il giorno indicato
+def predici(anno, mese, giorno, temp_anno_prec):
     try:
         modello = joblib.load('modelli/modello_xgboost.pkl')
 
     except FileNotFoundError:
         print("Errore: Modello non trovato. Eseguire prima il training.")
         return
-    
-    # 1. INPUT UTENTE (Giorno e Mese richiesti esplicitamente)
-    anno = int(input("Anno della previsione: "))
-    mese = int(input("Mese (1-12): "))
-    giorno = int(input("Giorno (1-31): "))
-    temp_anno_prec = float(input("Temperatura media dello stesso giorno anno precedente (°C): "))
-
     # 2. CALCOLO CICLICITÀ (SIN/COS)
     try:
         data_obj = datetime(anno, mese, giorno)
@@ -202,13 +211,18 @@ def usa_modello():
                                columns=['ANNO', 'SIN_GIORNO', 'COS_GIORNO', 'TEMPERATURA_MEDIA_ANNO_PRECEDENTE'])
 
     # 4. PREDIZIONE
-    previsione = modello.predict(input_data)
-    
-    print("\n" + "="*40)
-    print(f"DATA: {giorno}/{mese}/{anno}")
-    print(f"PREVISIONE TEMPERATURA MEDIA: {previsione[0]:.2f} °C")
-    print("="*40 + "\n")
+    return modello.predict(input_data)
 
-# Per testare:
-# train_and_test_xgb('dati/dataset_meteo_unificato.csv')
-# usa_modello_xgb()
+
+# restituisce un dizionario in cui ad ogni coppia mese-giorno dell'anno indicato è associato il valore predetto per quel giorno dal modello 
+def predizione_annuale(anno):
+    risultato = {}
+
+    for mese in range(1, 13):
+        giorni_nel_mese = calendar.monthrange(anno, mese)[1]
+
+        for giorno in range(1, giorni_nel_mese + 1):
+            valore = predici(anno, mese, giorno, leggi_tmedia(mese, giorno))
+            risultato[(mese, giorno)] = valore
+
+    return risultato

@@ -237,3 +237,25 @@ def aggiungi_temperatura_anno_precedente(file_path):
         writer.writerows(righe_modificate)
 
     print(f"  - Aggiunta la Colonna '{nuova_colonna}'.")
+
+
+# legge la temperatura media del giorno indicato nell'ultimo anno
+def leggi_tmedia(mese, giorno):
+    file_input = "dati/dati_ultimo_anno/ultimo_anno.csv"
+
+    with open(file_input, mode="r", newline="", encoding="utf-8-sig") as infile:
+        reader = csv.DictReader(infile, delimiter=';')
+
+        # Normalizza intestazioni
+        reader.fieldnames = [name.strip() for name in reader.fieldnames]
+
+        for row in reader:
+            # Normalizza chiavi
+            row = {k.strip(): v.strip() for k, v in row.items()}
+
+            if (row.get("MESE") == str(mese) and
+                row.get("GIORNO") == str(giorno)):
+                
+                return row.get("TMEDIA °C")
+
+    return None  # se non trova la riga

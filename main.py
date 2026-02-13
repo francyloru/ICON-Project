@@ -1,6 +1,6 @@
 import argparse
 from dati import gestore, unificatore_csv
-import train_and_test
+import xgboost_train_and_test
 
 def main():
     parser = argparse.ArgumentParser(description="Script di gestione Dataset e Training")
@@ -8,9 +8,10 @@ def main():
    
     # Definiamo i 4 parametri booleani come flag
     # Se il flag viene messo, il valore diventa True. Se omesso, è False.
-    parser.add_argument("--train_and_test", action="store_true", help="Avvia il training e il test")
     parser.add_argument("--new_dataset", action="store_true", help="Considera un nuovo dataset")
-    parser.add_argument("--use_model", action="store_true", help="Lancia il modello su dei dati di input")
+
+    parser.add_argument("--train_and_test_xgboost", action="store_true", help="Avvia il training e il test con xgboost")
+    parser.add_argument("--use_model_xgboost", action="store_true", help="Lancia il modello xgboost su dei dati di input")
 
     parser.add_argument("--normalize_dataset", action="store_true", help="Normalizza i dati")
     parser.add_argument("--altro_dataset", action="store_true", help="Utilizza il dataset alternativo")
@@ -18,7 +19,6 @@ def main():
     args = parser.parse_args()
 
     path_file = "dati/dataset_meteo_unificato.csv"
-
 
     # Esempio di logica: chiama una funzione nell'altro file se il flag è True
     if args.new_dataset:
@@ -30,14 +30,17 @@ def main():
         'PRESSIONESLM mb'])
         gestore.aggiungi_ciclicita_data(path_file)
         gestore.aggiungi_temperatura_anno_precedente(path_file)
+
+        #salviamo i dati dell'ultimo anno in un file apposito
+        unificatore_csv.dati_ultimo_anno(2025)
     
-    if args.train_and_test:
-        print("\n--- Addestramento e Valutazione del Modello con XGBoost:")
-        train_and_test.train_and_test(path_file, 'TMEDIA °C', 2025)
+    if args.train_and_test_xgboost:
+        print("\n--- ADDESTRAMENTO e VALUTAZIONE del Modello con XGBoost:")
+        xgboost_train_and_test.train_and_test(path_file, 'TMEDIA °C', 2025)
             
-    if args.use_model:
-        print("\n--- -- INSERIMENTO DATI METEO PER PREVISIONE --")
-        train_and_test.usa_modello()
+    if args.use_model_xgboost:
+        print("\n--- INSERIMENTO dati meteo per PREVISIONE con XGBoost --")
+        xgboost_train_and_test.usa_modello()
 
 if __name__ == "__main__":
     main()

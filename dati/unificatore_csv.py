@@ -50,3 +50,22 @@ def unifica_dataset(file_output):
 
     print("  - E' stato creato il dataset unificato.")
 
+def dati_ultimo_anno(ultimo_anno):
+    file_dati_ultimo_anno = "dati/dati_ultimo_anno/ultimo_anno.csv"
+    file_input = "dati/dataset_meteo_unificato.csv"
+
+    with open(file_input, mode="r", newline="", encoding="utf-8") as infile, \
+         open(file_dati_ultimo_anno, mode="w", newline="", encoding="utf-8") as outfile:
+        
+        reader = csv.DictReader(infile, delimiter=";")
+        writer = csv.DictWriter(outfile, fieldnames=reader.fieldnames, delimiter=";")
+        
+        # Scrive intestazione
+        writer.writeheader()
+        
+        # Filtra e scrive solo le righe con ANNO == ultimo_anno
+        for row in reader:
+            if row["ANNO"] == str(ultimo_anno):
+                writer.writerow(row)
+    
+    print(f"  - I dati dell'anno {ultimo_anno} (l'ultimo registrato) sono stati salvati nel file 'ultimo_anno.csv' nella cartella 'dati/dati_ultimo/anno'.")
