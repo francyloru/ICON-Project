@@ -240,8 +240,8 @@ def aggiungi_temperatura_anno_precedente(file_path):
 
 
 # legge la temperatura media del giorno indicato nell'ultimo anno
-def leggi_tmedia(mese, giorno):
-    file_input = "dati/dati_ultimo_anno/ultimo_anno.csv"
+def leggi_tmedia(localita, mese, giorno):
+    file_input = f"dati/dati_ultimo_anno/ultimo_anno_{localita}.csv"
 
     with open(file_input, mode="r", newline="", encoding="utf-8-sig") as infile:
         reader = csv.DictReader(infile, delimiter=';')

@@ -14,7 +14,7 @@ from sklearn.metrics import root_mean_squared_error
 
 
 
-def train_and_test(dataset, target_column, anno_test):
+def train_and_test(dataset, target_column, localita, anno_test):
     # ===============================
     # 1. CARICAMENTO DATI
     # ===============================
@@ -27,13 +27,13 @@ def train_and_test(dataset, target_column, anno_test):
         'TEMPERATURA_MEDIA_ANNO_PRECEDENTE'
     ]
 
-    df_clean = df.dropna(subset=features + [target_column])
+    df_clean = df.dropna(subset = ['LOCALITA'] + features + [target_column])
 
     # ===============================
     # 2. SPLIT TEMPORALE
     # ===============================
-    train_df = df_clean[(df_clean['ANNO'] < anno_test)]
-    test_df = df_clean[df_clean['ANNO'] == anno_test]
+    train_df = df_clean[(df_clean['ANNO'] < anno_test) & (df_clean['LOCALITA'] == localita)]
+    test_df = df_clean[(df_clean['ANNO'] == anno_test) & (df_clean['LOCALITA'] == localita)]
 
     X_train = train_df[features]
     y_train = train_df[target_column]
@@ -41,7 +41,7 @@ def train_and_test(dataset, target_column, anno_test):
     X_test = test_df[features]
     y_test = test_df[target_column]
 
-    print(f"  - Training sugli anni antecedenti al { anno_test } (Train size: {len(X_train)})")
+    print(f"  - Training sugli anni antecedenti al { anno_test } per {localita} (Train size: {len(X_train)})")
     print(f"  - Test sull'anno {anno_test} (Test size: {len(X_test)})")
 
     # ===============================
@@ -115,13 +115,13 @@ def train_and_test(dataset, target_column, anno_test):
     results_df = results_df.round(5)
 
     results_df.to_csv(
-        'dati/parametri/parametri_xgboost.csv',
+        f'dati/parametri/parametri_xgboost_{localita}.csv',
         index=False,
         sep=';',      # Separiamo le colonne con punto e virgola
         decimal=','   # <--- IMPORTANTE: Forza l'uso della virgola per i decimali
     )
 
-    print("  - Salvati gli iperparametri usati per il training nel file 'parametri_xgboost.csv' in 'dati/parametri'")
+    print(f"  - Salvati gli iperparametri usati per il training nel file 'parametri_xgboost_{localita}.csv' in 'dati/parametri'")
     # -----------------------------------------------------------------------
 
     # ===============================
@@ -136,7 +136,7 @@ def train_and_test(dataset, target_column, anno_test):
     risultati["PRED_XGBOOST"] = risultati["PRED_XGBOOST"].round(2)
 
     risultati.to_csv(
-        './dati/risultati_dei_modelli/predizioni_xgboost.csv',
+        f'./dati/risultati_dei_modelli/predizioni_xgboost_{localita}.csv',
         index=False,
         sep=';',
         decimal=','
@@ -145,10 +145,10 @@ def train_and_test(dataset, target_column, anno_test):
     # ===============================
     # 8. RETRAIN FINALE SU 2020–2025
     # ===============================
-    print("\n--- Retraining sull'intero dataset iniziato")
+    print("\n--- Iniziato il Retraining sull'intero dataset.")
 
     final_train_df = df_clean[
-         (df_clean['ANNO'] <= anno_test)
+         (df_clean['ANNO'] <= anno_test) & (df_clean['LOCALITA'] == localita)
     ]
 
     X_final = final_train_df[features]
@@ -163,21 +163,24 @@ def train_and_test(dataset, target_column, anno_test):
     final_model.fit(X_final, y_final)
 
     os.makedirs('modelli', exist_ok=True)
-    joblib.dump(final_model, 'modelli/modello_xgboost.pkl')
+    joblib.dump(final_model, f'modelli/modello_xgboost_{localita}.pkl')
 
-    print("  - Modello salvato come 'modello_xgboost.pkl' nella cartella 'modelli'")
+    print(f"  - Modello salvato come 'modello_xgboost_{localita}.pkl' nella cartella 'modelli'")
 
 
-def usa_modello():
-    # 1. INPUT UTENTE (Giorno e Mese richiesti esplicitamente)
+def usa_modello(localita):
+    # 1. INPUT UTENTE (Località, Giorno e Mese richiesti esplicitamente)
     anno = 2026
+    # localita = (input("Località: "))
+    print(f"Località: {localita}")
     print(f"Anno della previsione: {anno}")
+    
     mese = int(input("Mese (1-12): "))
     giorno = int(input("Giorno (1-31): "))
-    temp_anno_prec = leggi_tmedia(mese, giorno)
+    temp_anno_prec = leggi_tmedia(localita, mese, giorno)
     print(f"Temperatura media dello stesso giorno anno precedente (°C): {temp_anno_prec}")
 
-    previsione = predici (anno, mese, giorno, temp_anno_prec)
+    previsione = predici(localita, anno, mese, giorno, temp_anno_prec)
     
     print("\n" + "="*40)
     print(f"DATA: {giorno}/{mese}/{anno}")
@@ -186,9 +189,9 @@ def usa_modello():
 
 
 # restituisce la predizione per il giorno indicato
-def predici(anno, mese, giorno, temp_anno_prec):
+def predici(localita, anno, mese, giorno, temp_anno_prec):
     try:
-        modello = joblib.load('modelli/modello_xgboost.pkl')
+        modello = joblib.load(f'modelli/modello_xgboost_{localita}.pkl')
 
     except FileNotFoundError:
         print("Errore: Modello non trovato. Eseguire prima il training.")
@@ -215,14 +218,14 @@ def predici(anno, mese, giorno, temp_anno_prec):
 
 
 # restituisce un dizionario in cui ad ogni coppia mese-giorno dell'anno indicato è associato il valore predetto per quel giorno dal modello 
-def predizione_annuale(anno):
+def predizione_annuale(localita, anno):
     risultato = {}
 
     for mese in range(1, 13):
         giorni_nel_mese = calendar.monthrange(anno, mese)[1]
 
         for giorno in range(1, giorni_nel_mese + 1):
-            valore = predici(anno, mese, giorno, leggi_tmedia(mese, giorno))
+            valore = predici(localita, anno, mese, giorno, leggi_tmedia(localita, mese, giorno))
             risultato[(mese, giorno)] = valore
 
     return risultato

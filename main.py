@@ -19,6 +19,7 @@ def main():
     args = parser.parse_args()
 
     path_file = "dati/dataset_meteo_unificato.csv"
+    localita = 'Lecce'
 
     # Esempio di logica: chiama una funzione nell'altro file se il flag è True
     if args.new_dataset:
@@ -26,7 +27,8 @@ def main():
         unificatore_csv.unifica_dataset(path_file)
         gestore.gestisci_null(path_file)
         gestore.separatore_data(path_file)
-        gestore.elimina_colonne(path_file, ['PUNTORUGIADA °C', 'VISIBILITA km', 'VENTOMAX km/h', 'RAFFICA km/h', 
+        
+        gestore.elimina_colonne(path_file, ['PUNTORUGIADA °C', 'VISIBILITA m', 'VENTOMAX km/h', 'RAFFICA km/h', 
         'PRESSIONESLM mb'])
         gestore.aggiungi_ciclicita_data(path_file)
         gestore.aggiungi_temperatura_anno_precedente(path_file)
@@ -36,11 +38,12 @@ def main():
     
     if args.train_and_test_xgboost:
         print("\n--- ADDESTRAMENTO e VALUTAZIONE del Modello con XGBoost:")
-        xgboost_train_and_test.train_and_test(path_file, 'TMEDIA °C', 2025)
+        # print(xgboost_train_and_test.predizione_annuale())
+        xgboost_train_and_test.train_and_test(path_file, 'TMEDIA °C', localita, 2025)
             
     if args.use_model_xgboost:
         print("\n--- INSERIMENTO dati meteo per PREVISIONE con XGBoost --")
-        xgboost_train_and_test.usa_modello()
+        xgboost_train_and_test.usa_modello(localita)
 
 if __name__ == "__main__":
     main()
