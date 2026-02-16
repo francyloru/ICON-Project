@@ -41,8 +41,8 @@ def train_and_test(dataset, target_column, localita, anno_test):
     X_test = test_df[features]
     y_test = test_df[target_column]
 
-    print(f"  - Training sugli anni antecedenti al { anno_test } per {localita} (Train size: {len(X_train)})")
-    print(f"  - Test sull'anno {anno_test} (Test size: {len(X_test)})")
+    print(f"   - Training sugli anni antecedenti al { anno_test } per {localita} (Train size: {len(X_train)})")
+    print(f"   - Test sull'anno {anno_test} (Test size: {len(X_test)})")
 
     # ===============================
     # 3. GRID SEARCH
@@ -70,9 +70,9 @@ def train_and_test(dataset, target_column, localita, anno_test):
     )
 
 
-    print("  - Addestramento con TimeSeriesSplit iniziato.")
+    print("   - [XGBoost] Addestramento con TimeSeriesSplit iniziato.")
     grid_search.fit(X_train, y_train)
-    print("  - Addestramento completato.")
+    print("   - [XGBoost] Addestramento completato.")
 
     best_model = grid_search.best_estimator_
 
@@ -81,7 +81,7 @@ def train_and_test(dataset, target_column, localita, anno_test):
     rmse = root_mean_squared_error(y_test, pred_test)
     
 
-    print("\n  - Risultati Test:")
+    print("\n   - Risultati Test:")
     print(f"            - Migliori parametri: {grid_search.best_params_}")
     print(f"            - RMSE per l'anno {anno_test}: {rmse:.3f} °C")
 
@@ -121,7 +121,7 @@ def train_and_test(dataset, target_column, localita, anno_test):
         decimal=','   # <--- IMPORTANTE: Forza l'uso della virgola per i decimali
     )
 
-    print(f"  - Salvati gli iperparametri usati per il training nel file 'parametri_xgboost_{localita}.csv' in 'dati/parametri'")
+    print(f"   - Salvati gli iperparametri usati per il training nel file 'parametri_xgboost_{localita}.csv' in 'dati/parametri'")
     # -----------------------------------------------------------------------
 
     # ===============================
@@ -145,7 +145,7 @@ def train_and_test(dataset, target_column, localita, anno_test):
     # ===============================
     # 8. RETRAIN FINALE SU 2020–2025
     # ===============================
-    print("\n--- Iniziato il Retraining sull'intero dataset.")
+    print("\n   -> Iniziato il Retraining sull'intero dataset.")
 
     final_train_df = df_clean[
          (df_clean['ANNO'] <= anno_test) & (df_clean['LOCALITA'] == localita)
@@ -165,7 +165,9 @@ def train_and_test(dataset, target_column, localita, anno_test):
     os.makedirs('modelli', exist_ok=True)
     joblib.dump(final_model, f'modelli/modello_xgboost_{localita}.pkl')
 
-    print(f"  - Modello salvato come 'modello_xgboost_{localita}.pkl' nella cartella 'modelli'")
+    print(f"   --> Modello salvato come 'modello_xgboost_{localita}.pkl' nella cartella 'modelli'")
+
+    return round(rmse, 3)
 
 
 def usa_modello(localita):

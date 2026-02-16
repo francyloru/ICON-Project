@@ -1,0 +1,5 @@
+{
+    "Bari": "linear_regression",
+    "Lecce": "xgboost",
+    "Potenza": "random_forest"
+}

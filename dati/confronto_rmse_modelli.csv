@@ -1,0 +1,4 @@
+;Bari;Lecce;Potenza
+xgboost;2,456;2,604;3,041
+random_forest;2,471;2,667;3,031
+linear_regression;2,369;2,65;3,165
