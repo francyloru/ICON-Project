@@ -11,10 +11,10 @@ ANNO_TARGET = 2026  # L'anno per cui pianificare
 CITTA = ['Bari', 'Lecce', 'Potenza']
 
 COLTURE = {
-    'Zucche':   {'durata': 90,  't_ideal': 20},
-    'Patate':   {'durata': 120, 't_ideal': 15},
-    'Pomodori': {'durata': 70,  't_ideal': 25},
-    'Carote':   {'durata': 60,  't_ideal': 12}
+    'Zucche':   {'durata': 90,  't_ideal': 25}, #https://medium.com/@gardenlover/ideal-temperature-for-pumpkin-plants-f946be5bc75f
+    'Patate':   {'durata': 120, 't_ideal': 17}, # https://potatoinsights.com/best-climate-and-soil-conditions-for-potato-farming/#:~:text=16%E2%80%9321%C2%B0C%20during%20the%20day
+    'Pomodori': {'durata': 110,  't_ideal': 25}, # https://eos.com/blog/how-to-grow-tomatoes/
+    'Carote':   {'durata': 120,  't_ideal': 19} # https://en.wikipedia.org/wiki/Carrot#:~:text=Le%20carote%20vengono,e%2070%20%C2%B0F)
 }
 
 # Dizionario globale: TEMPERATURE[citta] = [t_giorno_1, t_giorno_2, ... t_giorno_365]
