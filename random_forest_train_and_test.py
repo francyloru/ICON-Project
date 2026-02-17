@@ -12,6 +12,7 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import GridSearchCV, TimeSeriesSplit
 from sklearn.metrics import root_mean_squared_error
 
+
 def train_and_test(dataset, target_column, localita, anno_test):
     # ===============================
     # 1. CARICAMENTO DATI
@@ -65,7 +66,7 @@ def train_and_test(dataset, target_column, localita, anno_test):
         param_grid,
         cv=tscv,
         scoring='neg_root_mean_squared_error',
-        n_jobs=-1
+        n_jobs=None
     )
 
     print("   - Addestramento con TimeSeriesSplit iniziato.")
@@ -142,6 +143,7 @@ def train_and_test(dataset, target_column, localita, anno_test):
 def predici(localita, anno, mese, giorno, temp_anno_prec):
     try:
         modello = joblib.load(f'modelli/modello_random_forest_{localita}.pkl')
+        modello.set_params(n_jobs=1)
     except FileNotFoundError:
         print("Errore: Modello RF non trovato.")
         return
@@ -155,9 +157,11 @@ def predici(localita, anno, mese, giorno, temp_anno_prec):
     except ValueError:
         return
 
-    input_data = pd.DataFrame([[anno, sin_giorno, cos_giorno, temp_anno_prec]], 
+    input_data = pd.DataFrame([[anno, sin_giorno, cos_giorno, float(temp_anno_prec)]], 
                                columns=['ANNO', 'SIN_GIORNO', 'COS_GIORNO', 'TEMPERATURA_MEDIA_ANNO_PRECEDENTE'])
-    return modello.predict(input_data)
+    
+    # print(input_data.dtypes)
+    return float(modello.predict(input_data)[0])
 
 def predizione_annuale(localita, anno):
     risultato = {}
@@ -166,5 +170,5 @@ def predizione_annuale(localita, anno):
         for giorno in range(1, giorni_nel_mese + 1):
             valore = predici(localita, anno, mese, giorno, leggi_tmedia(localita, mese, giorno))
             if valore is not None:
-                risultato[(mese, giorno)] = valore[0]
+                risultato[(mese, giorno)] = valore
     return risultato

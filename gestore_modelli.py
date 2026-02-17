@@ -115,9 +115,6 @@ def predici_temperatura_localita(localita, anno, mese, giorno):
 
 
 def predici_temperature_anno_citta(citta, anno):
-    """
-    Chiama la funzione 'predizione_annuale' del modello associato alla città.
-    """
     # 1. Carica configurazione
     if not os.path.exists(FILE_CONFIG_BEST_MODELS):
         print("Errore: File configurazione modelli non trovato.")
@@ -133,17 +130,9 @@ def predici_temperature_anno_citta(citta, anno):
         return {}
 
     # 2. Chiama la funzione annuale del modulo specifico
+    
     modulo = MAPPA_MODELLI[modello_scelto]
     risultato = modulo.predizione_annuale(citta, anno)
     
     return risultato
 
-# Esempio di utilizzo (commentato per permettere l'importazione)
-if __name__ == "__main__":
-    # dataset_path = 'dati/dataset_climatico.csv' # Esempio
-    # esegui_confronto_e_training(dataset_path, 'T_MEDIA', 2024)
-    
-    # Esempio predizione
-    # val = predici_temperatura_localita('Bari', 2026, 8, 15)
-    # print(f"Previsione Ferragosto 2026 Bari: {val}")
-    pass

@@ -94,16 +94,18 @@ def predici(localita, anno, mese, giorno, temp_anno_prec):
     except ValueError:
         return
 
-    input_data = pd.DataFrame([[anno, sin_giorno, cos_giorno, temp_anno_prec]], 
+    input_data = pd.DataFrame([[anno, sin_giorno, cos_giorno, float(temp_anno_prec)]], 
                                columns=['ANNO', 'SIN_GIORNO', 'COS_GIORNO', 'TEMPERATURA_MEDIA_ANNO_PRECEDENTE'])
-    return modello.predict(input_data)
+    
+    return float(modello.predict(input_data)[0])
 
 def predizione_annuale(localita, anno):
     risultato = {}
     for mese in range(1, 13):
         giorni_nel_mese = calendar.monthrange(anno, mese)[1]
         for giorno in range(1, giorni_nel_mese + 1):
+            # print("lllll ",localita, anno, mese, giorno, leggi_tmedia(localita, mese, giorno))
             valore = predici(localita, anno, mese, giorno, leggi_tmedia(localita, mese, giorno))
             if valore is not None:
-                risultato[(mese, giorno)] = valore[0]
+                risultato[(mese, giorno)] = valore
     return risultato

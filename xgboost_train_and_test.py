@@ -212,11 +212,12 @@ def predici(localita, anno, mese, giorno, temp_anno_prec):
 
     # 3. CREAZIONE DATAFRAME DI INPUT (Deve avere lo stesso ordine del training)
     # Ordine: ['ANNO', 'SIN_GIORNO', 'COS_GIORNO', 'TEMPERATURA_MEDIA_ANNO_PRECEDENTE']
-    input_data = pd.DataFrame([[anno, sin_giorno, cos_giorno, temp_anno_prec]], 
+    input_data = pd.DataFrame([[anno, sin_giorno, cos_giorno, float(temp_anno_prec)]], 
                                columns=['ANNO', 'SIN_GIORNO', 'COS_GIORNO', 'TEMPERATURA_MEDIA_ANNO_PRECEDENTE'])
 
     # 4. PREDIZIONE
-    return modello.predict(input_data)
+    # print(input_data.dtypes)
+    return float(modello.predict(input_data)[0])
 
 
 # restituisce un dizionario in cui ad ogni coppia mese-giorno dell'anno indicato è associato il valore predetto per quel giorno dal modello 
