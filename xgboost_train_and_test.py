@@ -174,20 +174,20 @@ def usa_modello(localita):
     # 1. INPUT UTENTE (Località, Giorno e Mese richiesti esplicitamente)
     anno = 2026
     # localita = (input("Località: "))
-    print(f"Località: {localita}")
-    print(f"Anno della previsione: {anno}")
+    print(f"  - Località: {localita}")
+    print(f"  - Anno della previsione: {anno}")
     
-    mese = int(input("Mese (1-12): "))
-    giorno = int(input("Giorno (1-31): "))
+    mese = int(input("  - Mese (1-12): "))
+    giorno = int(input("  - Giorno (1-31): "))
     temp_anno_prec = leggi_tmedia(localita, mese, giorno)
-    print(f"Temperatura media dello stesso giorno anno precedente (°C): {temp_anno_prec}")
+    print(f"  - Temperatura media dello stesso giorno anno precedente (°C): {temp_anno_prec}")
 
     previsione = predici(localita, anno, mese, giorno, temp_anno_prec)
     
-    print("\n" + "="*40)
-    print(f"DATA: {giorno}/{mese}/{anno}")
-    print(f"PREVISIONE TEMPERATURA MEDIA: {previsione[0]:.2f} °C")
-    print("="*40 + "\n")
+    print("\n" + "="*42)
+    print(f"  DATA: {giorno}/{mese}/{anno}")
+    print(f"  PREVISIONE TEMPERATURA MEDIA: {previsione:.2f} °C")
+    print("="*42 + "\n")
 
 
 # restituisce la predizione per il giorno indicato
