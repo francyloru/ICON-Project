@@ -117,71 +117,81 @@ def trova_miglior_start_date(pianta, citta, giorno_minimo):
     return best_day, min_cost
 
 def run_a_star(ANNO_TARGET, CITTA):
-    # Struttura nodo: (F_Score, G_Score, [Disponibilità Serre], [Piante Rimaste], [Log Azioni])
-    # Disponibilità Serre è una tupla: (giorno_libero_Bari, giorno_libero_Lecce, ...)
+    print("\n-- Avvio della ricerca con A* (esplorazione permutazioni completa).")
     
-    print("\n-- Avvio della ricerca con A*.")
     piante_init = tuple(sorted(COLTURE.keys()))
     disp_init = tuple([0] * len(CITTA))
     
     # Priority Queue
     start_h = calcola_euristica(piante_init, CITTA)
-    start_node = (start_h, 0, disp_init, piante_init, [])
+    
+    # AGGIUNTA: Un contatore univoco per rompere le parità nella heap
+    c = 0 
+    
+    # Struttura nodo: (F, G, contatore, Disp, Piante, Storia)
+    # Il contatore è in 3a posizione: se F e G sono uguali, vince chi è stato inserito prima.
+    start_node = (start_h, 0, c, disp_init, piante_init, [])
     
     open_set = [start_node]
-    visited_states = set() # Per evitare cicli o percorsi ridondanti
-    
-    cnt = 0
+    visited_states = set() 
     
     while open_set:
-        cnt += 1
-        f, g, disp, piante, storia = heapq.heappop(open_set)
+        # Estraiamo ignorando il contatore (usiamo _ )
+        f, g, _, disp, piante, storia = heapq.heappop(open_set)
         
-        # GOAL STATE: Nessuna pianta rimasta
+        # GOAL STATE
         if not piante:
             return g, storia
         
-        # Pruning stati già visitati con costo peggiore/uguale
+        # Pruning
         state_sig = (disp, piante)
         if state_sig in visited_states:
             continue
         visited_states.add(state_sig)
         
-        # Espansione: Prendiamo la prima pianta della lista (strategia deterministica per ridurre branching)
-        pianta_target = piante[0]
-        restanti = piante[1:]
-        
-        # Proviamo ad assegnarla a ciascuna città
-        for i, citta in enumerate(CITTA):
-            giorno_libero = disp[i]
+        # Espansione: proviamo TUTTE le piante rimaste come prossima mossa
+        for idx_p, pianta_target in enumerate(piante):
             
-            # Cerca il miglior slot temporale disponibile da ora in poi
-            best_start, costo_energia = trova_miglior_start_date(pianta_target, citta, giorno_libero)
+            # Nuova lista piante (rimuoviamo quella corrente)
+            restanti = piante[:idx_p] + piante[idx_p+1:]
             
-            if best_start != -1:
-                # Nuovi parametri
-                new_g = g + costo_energia
-                new_h = calcola_euristica(restanti, CITTA)
-                new_f = new_g + new_h
+            for i, citta in enumerate(CITTA):
+                giorno_libero = disp[i]
                 
-                # Aggiorna disponibilità serra
-                durata = COLTURE[pianta_target]['durata']
-                new_disp = list(disp)
-                new_disp[i] = best_start + durata # La serra è occupata fino alla fine
+                best_start, costo_energia = trova_miglior_start_date(pianta_target, citta, giorno_libero)
                 
-                new_action = {
-                    'citta': citta,
-                    'pianta': pianta_target,
-                    'start': best_start,
-                    'end': best_start + durata,
-                    'costo': costo_energia
-                }
-                
-                heapq.heappush(open_set, (new_f, new_g, tuple(new_disp), restanti, storia + [new_action]))
+                if best_start != -1:
+                    new_g = g + costo_energia
+                    new_h = calcola_euristica(restanti, CITTA)
+                    new_f = new_g + new_h
+                    
+                    durata = COLTURE[pianta_target]['durata']
+                    new_disp = list(disp)
+                    new_disp[i] = best_start + durata 
+                    
+                    new_action = {
+                        'citta': citta,
+                        'pianta': pianta_target,
+                        'start': best_start,
+                        'end': best_start + durata,
+                        'costo': costo_energia
+                    }
+                    
+                    # Incrementiamo il contatore univoco
+                    c += 1
+                    
+                    # Inseriamo il contatore nella tupla
+                    heapq.heappush(open_set, (
+                        new_f, 
+                        new_g, 
+                        c,  # <-- Questo risolve il problema dei dizionari
+                        tuple(new_disp), 
+                        restanti, 
+                        storia + [new_action]
+                    ))
 
-    print("\n-- Ricerca con A* terminata.")      
+    print("\n-- Ricerca con A* terminata senza soluzioni complete.")       
     return None, None
-
 
 def cerca_soluzione(ANNO_TARGET, CITTA):
     # 1. Carica previsioni ML
