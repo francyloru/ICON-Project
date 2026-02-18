@@ -1,0 +1,4 @@
+;Bari_RMSE;Bari_STD_DEV;Lecce_RMSE;Lecce_STD_DEV;Potenza_RMSE;Potenza_STD_DEV
+xgboost;2,456;2,402;2,604;2,582;3,041;2,97
+random_forest;2,471;2,444;2,667;2,667;3,031;2,99
+linear_regression;2,369;2,368;2,65;2,626;3,165;2,925

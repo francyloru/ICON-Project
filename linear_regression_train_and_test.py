@@ -11,6 +11,7 @@ from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import GridSearchCV, TimeSeriesSplit
 from sklearn.metrics import root_mean_squared_error
 
+
 def train_and_test(dataset, target_column, localita, anno_test):
     df = pd.read_csv(dataset, sep=';')
     features = ['ANNO', 'SIN_GIORNO', 'COS_GIORNO', 'TEMPERATURA_MEDIA_ANNO_PRECEDENTE']
@@ -26,8 +27,6 @@ def train_and_test(dataset, target_column, localita, anno_test):
 
     print(f"   - [LinearReg] Training sugli anni antecedenti al {anno_test} per {localita}")
 
-    # La regressione lineare standard ha pochi iperparametri. 
-    # Usiamo fit_intercept nel grid search per mantenere la struttura del codice identica.
     param_grid = {
         'fit_intercept': [True, False]
     }
@@ -45,7 +44,18 @@ def train_and_test(dataset, target_column, localita, anno_test):
     pred_test = best_model.predict(X_test)
     rmse = root_mean_squared_error(y_test, pred_test)
 
+    # ===============================
+    # CALCOLO DEVIAZIONE STANDARD DEI RESIDUI
+    # ===============================
+    # La deviazione standard degli errori misura la dispersione dei residui
+    # attorno al loro valor medio. Complementa l'RMSE fornendo info sulla
+    # variabilità delle predizioni (RMSE² = bias² + std_dev²).
+    residui = np.array(y_test) - pred_test
+    dev_standard = float(np.std(residui))
+
     print(f"\n   - Risultati Test (RMSE): {rmse:.3f} °C")
+    print(f"   - Deviazione Standard residui: {dev_standard:.3f} °C")
+    print(f"   - Bias medio: {float(np.mean(residui)):.3f} °C")
 
     # Salvataggio Parametri
     results_df = pd.DataFrame(grid_search.cv_results_)
@@ -54,7 +64,9 @@ def train_and_test(dataset, target_column, localita, anno_test):
     results_df['mean_test_score'] = -results_df['mean_test_score']
     results_df = results_df.rename(columns={'mean_test_score': 'RMSE_medio_CV'})
     results_df[f'RMSE_Test_{anno_test}'] = np.nan
+    results_df[f'STD_DEV_Test_{anno_test}'] = np.nan
     results_df.loc[grid_search.best_index_, f'RMSE_Test_{anno_test}'] = rmse
+    results_df.loc[grid_search.best_index_, f'STD_DEV_Test_{anno_test}'] = dev_standard
     results_df = results_df.round(5)
 
     os.makedirs('dati/parametri', exist_ok=True)
@@ -77,28 +89,27 @@ def train_and_test(dataset, target_column, localita, anno_test):
     joblib.dump(final_model, f'modelli/modello_linear_regression_{localita}.pkl')
     print(f"   --> Modello salvato: 'modello_linear_regression_{localita}.pkl'")
 
-    return round(rmse, 3)
+    # Restituisce sia RMSE che deviazione standard dei residui
+    return round(rmse, 3), round(dev_standard, 3)
 
 
 def usa_modello(localita):
-    # 1. INPUT UTENTE (Località, Giorno e Mese richiesti esplicitamente)
     anno = 2026
-    # localita = (input("Località: "))
     print(f"  - Località: {localita}")
     print(f"  - Anno della previsione: {anno}")
-    
+
     mese = int(input("  - Mese (1-12): "))
     giorno = int(input("  - Giorno (1-31): "))
     temp_anno_prec = leggi_tmedia(localita, mese, giorno)
     print(f"  - Temperatura media dello stesso giorno anno precedente (°C): {temp_anno_prec}")
 
     previsione = predici(localita, anno, mese, giorno, temp_anno_prec)
-    
-    print("\n" + "="*42)
+
+    print("\n" + "=" * 42)
     print(f"  DATA: {giorno}/{mese}/{anno}")
     print(f"  PREVISIONE TEMPERATURA MEDIA: {previsione:.2f} °C")
-    print("="*42 + "\n")
-    
+    print("=" * 42 + "\n")
+
 
 def predici(localita, anno, mese, giorno, temp_anno_prec):
     try:
@@ -106,7 +117,7 @@ def predici(localita, anno, mese, giorno, temp_anno_prec):
     except FileNotFoundError:
         print("Errore: Modello LR non trovato.")
         return
-    
+
     try:
         data_obj = datetime(anno, mese, giorno)
         giorno_anno = data_obj.timetuple().tm_yday
@@ -115,17 +126,17 @@ def predici(localita, anno, mese, giorno, temp_anno_prec):
     except ValueError:
         return
 
-    input_data = pd.DataFrame([[anno, sin_giorno, cos_giorno, float(temp_anno_prec)]], 
+    input_data = pd.DataFrame([[anno, sin_giorno, cos_giorno, float(temp_anno_prec)]],
                                columns=['ANNO', 'SIN_GIORNO', 'COS_GIORNO', 'TEMPERATURA_MEDIA_ANNO_PRECEDENTE'])
-    
+
     return float(modello.predict(input_data)[0])
+
 
 def predizione_annuale(localita, anno):
     risultato = {}
     for mese in range(1, 13):
         giorni_nel_mese = calendar.monthrange(anno, mese)[1]
         for giorno in range(1, giorni_nel_mese + 1):
-            # print("lllll ",localita, anno, mese, giorno, leggi_tmedia(localita, mese, giorno))
             valore = predici(localita, anno, mese, giorno, leggi_tmedia(localita, mese, giorno))
             if valore is not None:
                 risultato[(mese, giorno)] = valore

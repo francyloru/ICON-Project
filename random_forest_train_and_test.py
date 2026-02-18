@@ -46,7 +46,6 @@ def train_and_test(dataset, target_column, localita, anno_test):
     # ===============================
     # 3. GRID SEARCH
     # ===============================
-    # Parametri specifici per Random Forest
     param_grid = {
         'n_estimators': [100, 200],
         'max_depth': [5, 10, None],
@@ -78,20 +77,33 @@ def train_and_test(dataset, target_column, localita, anno_test):
 
     rmse = root_mean_squared_error(y_test, pred_test)
 
+    # ===============================
+    # CALCOLO DEVIAZIONE STANDARD DEI RESIDUI
+    # ===============================
+    # La deviazione standard degli errori misura la dispersione dei residui
+    # attorno al loro valor medio. Complementa l'RMSE fornendo info sulla
+    # variabilità delle predizioni (RMSE² = bias² + std_dev²).
+    residui = np.array(y_test) - pred_test
+    dev_standard = float(np.std(residui))
+
     print("\n   - Risultati Test:")
     print(f"            - Migliori parametri: {grid_search.best_params_}")
     print(f"            - RMSE per l'anno {anno_test}: {rmse:.3f} °C")
+    print(f"            - Deviazione Standard residui: {dev_standard:.3f} °C")
+    print(f"            - Bias medio: {float(np.mean(residui)):.3f} °C")
 
     # -----------------------------------------------------------------------
-    # Salvataggio parametri (logica identica al file originale)
+    # Salvataggio parametri
     results_df = pd.DataFrame(grid_search.cv_results_)
     colonne_interessanti = [col for col in results_df.columns if 'param_' in col or 'mean_test_score' in col]
     results_df = results_df[colonne_interessanti]
     results_df['mean_test_score'] = -results_df['mean_test_score']
     results_df = results_df.rename(columns={'mean_test_score': 'RMSE_medio_CV'})
     results_df[f'RMSE_Test_{anno_test}'] = np.nan
+    results_df[f'STD_DEV_Test_{anno_test}'] = np.nan
     best_index = grid_search.best_index_
     results_df.loc[best_index, f'RMSE_Test_{anno_test}'] = rmse
+    results_df.loc[best_index, f'STD_DEV_Test_{anno_test}'] = dev_standard
     results_df = results_df.round(5)
 
     os.makedirs('dati/parametri', exist_ok=True)
@@ -138,27 +150,26 @@ def train_and_test(dataset, target_column, localita, anno_test):
     joblib.dump(final_model, f'modelli/modello_random_forest_{localita}.pkl')
     print(f"   --> Modello salvato come 'modello_random_forest_{localita}.pkl'")
 
-    return round(rmse, 3)
+    # Restituisce sia RMSE che deviazione standard dei residui
+    return round(rmse, 3), round(dev_standard, 3)
 
 
 def usa_modello(localita):
-    # 1. INPUT UTENTE (Località, Giorno e Mese richiesti esplicitamente)
     anno = 2026
-    # localita = (input("Località: "))
     print(f"  - Località: {localita}")
     print(f"  - Anno della previsione: {anno}")
-    
+
     mese = int(input("  - Mese (1-12): "))
     giorno = int(input("  - Giorno (1-31): "))
     temp_anno_prec = leggi_tmedia(localita, mese, giorno)
     print(f"  - Temperatura media dello stesso giorno anno precedente (°C): {temp_anno_prec}")
 
     previsione = predici(localita, anno, mese, giorno, temp_anno_prec)
-    
-    print("\n" + "="*42)
+
+    print("\n" + "=" * 42)
     print(f"  DATA: {giorno}/{mese}/{anno}")
     print(f"  PREVISIONE TEMPERATURA MEDIA: {previsione:.2f} °C")
-    print("="*42 + "\n")
+    print("=" * 42 + "\n")
 
 
 def predici(localita, anno, mese, giorno, temp_anno_prec):
@@ -168,7 +179,7 @@ def predici(localita, anno, mese, giorno, temp_anno_prec):
     except FileNotFoundError:
         print("Errore: Modello RF non trovato.")
         return
-    
+
     try:
         data_obj = datetime(anno, mese, giorno)
         giorno_anno = data_obj.timetuple().tm_yday
@@ -178,11 +189,11 @@ def predici(localita, anno, mese, giorno, temp_anno_prec):
     except ValueError:
         return
 
-    input_data = pd.DataFrame([[anno, sin_giorno, cos_giorno, float(temp_anno_prec)]], 
+    input_data = pd.DataFrame([[anno, sin_giorno, cos_giorno, float(temp_anno_prec)]],
                                columns=['ANNO', 'SIN_GIORNO', 'COS_GIORNO', 'TEMPERATURA_MEDIA_ANNO_PRECEDENTE'])
-    
-    # print(input_data.dtypes)
+
     return float(modello.predict(input_data)[0])
+
 
 def predizione_annuale(localita, anno):
     risultato = {}

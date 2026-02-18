@@ -2,6 +2,7 @@ import argparse
 from dati import gestore, unificatore_csv
 import gestore_modelli
 import cerca_con_a_star
+import valuta_a_star
 
 import xgboost_train_and_test
 import linear_regression_train_and_test
@@ -23,6 +24,7 @@ def main():
     parser.add_argument("--new_dataset", action="store_true", help="Si considerano nuovi file di meteo presi dalla piattaforma online (https://www.ilmeteo.it/portale/archivio-meteo) e si uniscono (e formalizzano) per essere usati per l'addestramento dei modelli")
     parser.add_argument("--find_models", action="store_true", help="Allena tutte le tipologie di modello di apprendimento su tutte le città, li testa sull'anno 2025 e in base ai risultati dei test, individua il modello migliore per ciascuna città ")
     parser.add_argument("--find_scheduling", action="store_true", help="Esegue l'algoritmo di ricerca A* per trovare la pianificazione che minimizza i costi")
+    parser.add_argument("--evaluation_scheduling", action="store_true", help="Mostra le perfomance dell'algoritmo di ricerca A* per la sua valutazione")
 
     # Comandi per poter usare i modelli (questi devono essere già allenati)
     parser.add_argument("--use_model_xgboost", action="store_true", help="Lancia il modello xgboost su dei dati di input")
@@ -53,6 +55,10 @@ def main():
     if args.find_scheduling:
         print("\n=== INDIVIDUAZIONE DELLA MIGLIORE PIANIFICAZIONE ===")
         cerca_con_a_star.cerca_soluzione(anno_predizione, citta)
+
+    if args.evaluation_scheduling:
+        print("\n=== INDIVIDUAZIONE PERFOMANCE A* ===")
+        valuta_a_star.esegui_benchmark(anno_predizione, citta)
 
             
     if args.use_model_xgboost:
