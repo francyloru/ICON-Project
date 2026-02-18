@@ -2,25 +2,27 @@ import heapq
 import datetime
 import gestore_modelli
 from datetime import date, timedelta
+import json
+
+with open("colture.json", "r", encoding="utf-8") as file:
+    COLTURE = json.load(file)
 
 # =============================================================================
 # 2. CONFIGURAZIONE E CARICAMENTO DATI
 # =============================================================================
 
-ANNO_TARGET = 2026  # L'anno per cui pianificare
-CITTA = ['Bari', 'Lecce', 'Potenza']
-
-COLTURE = {
-    'Zucche':   {'durata': 90,  't_ideal': 25}, #https://medium.com/@gardenlover/ideal-temperature-for-pumpkin-plants-f946be5bc75f
-    'Patate':   {'durata': 120, 't_ideal': 17}, # https://potatoinsights.com/best-climate-and-soil-conditions-for-potato-farming/#:~:text=16%E2%80%9321%C2%B0C%20during%20the%20day
-    'Pomodori': {'durata': 110,  't_ideal': 25}, # https://eos.com/blog/how-to-grow-tomatoes/
-    'Carote':   {'durata': 120,  't_ideal': 19} # https://en.wikipedia.org/wiki/Carrot#:~:text=Le%20carote%20vengono,e%2070%20%C2%B0F)
-}
+# 
+#COLTURE = {
+#    'Zucche':   {'durata': 90,  't_ideal': 25}, #https://medium.com/@gardenlover/ideal-temperature-for-pumpkin-plants-f946be5bc75f
+#    'Patate':   {'durata': 120, 't_ideal': 17}, # https://potatoinsights.com/best-climate-and-soil-conditions-for-potato-farming/#:~:text=16%E2%80%9321%C2%B0C%20during%20the%20day
+#    'Pomodori': {'durata': 110,  't_ideal': 25}, # https://eos.com/blog/how-to-grow-tomatoes/
+#    'Carote':   {'durata': 120,  't_ideal': 19} # https://en.wikipedia.org/wiki/Carrot#:~:text=Le%20carote%20vengono,e%2070%20%C2%B0F)
+#}
 
 # Dizionario globale: TEMPERATURE[citta] = [t_giorno_1, t_giorno_2, ... t_giorno_365]
 TEMPERATURE = {}
 
-def carica_dati_meteo():
+def carica_dati_meteo(ANNO_TARGET, CITTA):
     print(f"\n-- Caricamento modelli predittivi per l'anno {ANNO_TARGET}:")
     
     for citta in CITTA:
@@ -45,7 +47,7 @@ def carica_dati_meteo():
 
 COSTI_PRECALCOLATI = {} # [pianta][citta][giorno_start] -> costo totale
 
-def precalcola_costi():
+def precalcola_costi(ANNO_TARGET, CITTA):
     # Crea una matrice di costi. Invece di calcolare l'energia durante la ricerca,
     # calcoliamo qui: "Se pianto X a Y il giorno Z, quanto spendo?"
     for pianta, info in COLTURE.items():
@@ -75,12 +77,12 @@ def precalcola_costi():
 # 4. ALGORITMO DI RICERCA A* (A-Star)
 # =============================================================================
 
-def get_date_string(day_index):
+def get_date_string(day_index, ANNO_TARGET):
     # Converte indice 0-364 in 'DD Mese'
     d = date(ANNO_TARGET, 1, 1) + timedelta(days=day_index)
     return d.strftime("%d %B")
 
-def calcola_euristica(piante_rimanenti):
+def calcola_euristica(piante_rimanenti, CITTA):
     # Stima ottimistica (Lower Bound): somma dei costi minimi assoluti 
     # per le piante rimaste, ignorando conflitti di serra.
     
@@ -114,7 +116,7 @@ def trova_miglior_start_date(pianta, citta, giorno_minimo):
             
     return best_day, min_cost
 
-def run_a_star():
+def run_a_star(ANNO_TARGET, CITTA):
     # Struttura nodo: (F_Score, G_Score, [Disponibilità Serre], [Piante Rimaste], [Log Azioni])
     # Disponibilità Serre è una tupla: (giorno_libero_Bari, giorno_libero_Lecce, ...)
     
@@ -123,7 +125,7 @@ def run_a_star():
     disp_init = tuple([0] * len(CITTA))
     
     # Priority Queue
-    start_h = calcola_euristica(piante_init)
+    start_h = calcola_euristica(piante_init, CITTA)
     start_node = (start_h, 0, disp_init, piante_init, [])
     
     open_set = [start_node]
@@ -159,7 +161,7 @@ def run_a_star():
             if best_start != -1:
                 # Nuovi parametri
                 new_g = g + costo_energia
-                new_h = calcola_euristica(restanti)
+                new_h = calcola_euristica(restanti, CITTA)
                 new_f = new_g + new_h
                 
                 # Aggiorna disponibilità serra
@@ -181,16 +183,16 @@ def run_a_star():
     return None, None
 
 
-def cerca_soluzione():
+def cerca_soluzione(ANNO_TARGET, CITTA):
     # 1. Carica previsioni ML
-    carica_dati_meteo()
+    carica_dati_meteo(ANNO_TARGET, CITTA)
     
     # 2. Precalcola costi energetici per ogni combinazione
-    precalcola_costi()
+    precalcola_costi(ANNO_TARGET, CITTA)
     
     # 3. Esegui A*
     
-    energia_tot, piano = run_a_star()
+    energia_tot, piano = run_a_star(ANNO_TARGET, CITTA)
     
     if piano:
         print("\n=== PIANO OTTIMALE TROVATO ===")
@@ -200,14 +202,14 @@ def cerca_soluzione():
         # Ordiniamo per data cronologica
         piano.sort(key=lambda x: x['start'])
         
-        print(" " * 25, "Riepilogo")
+        print(" " * 25, "Riepilogo:")
         print("-" * 75)
         print(f"|  {'COLTURA':<10} |    {'CITTÀ':<8}|           {'PERIODO OTTIMALE':<26} | {'COSTO':<6}|")
         print("-" * 75)
         
         for p in sorted(piano, key=lambda x: x['citta']):
-            d_start = get_date_string(p['start'])
-            d_end = get_date_string(p['end'])
+            d_start = get_date_string(p['start'], ANNO_TARGET)
+            d_end = get_date_string(p['end'], ANNO_TARGET)
             print(f"|  {p['pianta']:<10} |  {p['citta']:<9} | {d_start:<16} -> {d_end:<16} |{p['costo']:6.1f} |")
         print("-" * 75)
     else:

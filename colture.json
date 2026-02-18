@@ -1,0 +1,6 @@
+{
+    "Zucche":   { "durata": 90,  "t_ideal": 25 }, 
+    "Patate":   { "durata": 120, "t_ideal": 17 },
+    "Pomodori": { "durata": 110, "t_ideal": 25 },
+    "Carote":   { "durata": 120, "t_ideal": 19 }
+}

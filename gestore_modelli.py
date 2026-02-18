@@ -19,8 +19,8 @@ MAPPA_MODELLI = {
 
 FILE_CONFIG_BEST_MODELS = 'modelli/migliori_modelli.json'
 
-def esegui_confronto_e_training(dataset, target_column, anno_test):
-    citta_list = ['Bari', 'Lecce', 'Potenza']
+def esegui_confronto_e_training(dataset, target_column, anno_test, citta_list):
+
     modelli_nomi = list(MAPPA_MODELLI.keys())
     
     # Dizionario per accumulare i risultati: { 'modello': {'Bari': rmse, 'Lecce': rmse...} }
