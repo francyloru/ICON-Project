@@ -107,7 +107,7 @@ Vincoli:
 
 # Modellazione del Problema di Ricerca
 
-## Stato
+## 1. Stato
 
 Uno stato è rappresentato come:
 
@@ -119,7 +119,7 @@ dove:
 - `piante_rimanenti` rappresenta l'insieme delle colture non ancora pianificate
 
 
-## Azione
+## 2. Azione
 
 Un'azione consiste nell'assegnare una coltura `p` a una città `c` con giorno di inizio `d`.
 
@@ -129,7 +129,7 @@ Dopo l'assegnazione:
 <code>disp[c] = d + durata_coltura</code>
 
 
-## Funzione di costo
+## 3. Funzione di costo
 
 Il costo di coltivazione è definito come:
 
